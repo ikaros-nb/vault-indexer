@@ -1,11 +1,10 @@
 use axum::{
-    extract::{State, Request},
+    Json, Router,
+    extract::{Request, State},
     http::StatusCode,
     middleware::{self, Next},
     response::Response,
     routing::{get, post},
-    Json,
-    Router,
 };
 use serde_json::Value;
 
@@ -16,8 +15,7 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let webhook_secret = std::env::var("WEBHOOK_SECRET")
-        .expect("WEBHOOK_SECRET should be defined");
+    let webhook_secret = std::env::var("WEBHOOK_SECRET").expect("WEBHOOK_SECRET should be defined");
     let state = AppState { webhook_secret };
 
     let helius_webhook = Router::new()
@@ -28,7 +26,7 @@ async fn main() {
         .route("/", get(hello_world))
         .route("/health_check", get(health_check))
         .merge(helius_webhook);
-    
+
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
         .expect("Failed to bind to port 3000");
@@ -57,11 +55,12 @@ async fn auth_middleware(
         .get("Authorization")
         .and_then(|v| v.to_str().ok());
 
-    if received == Some(state.webhook_secret.as_str()) {
-        Ok(next.run(request).await)
-    } else {
-        eprintln!("Rejected : Invalid auth header");
-        Err(StatusCode::UNAUTHORIZED)
+    match received {
+        Some(value) if value == state.webhook_secret => Ok(next.run(request).await),
+        _ => {
+            eprintln!("Rejected : Invalid auth header");
+            Err(StatusCode::UNAUTHORIZED)
+        }
     }
 }
 
