@@ -25,6 +25,33 @@ struct HeliusTransaction {
     description: String,
     #[serde(rename = "type")]
     tx_type: String,
+    #[serde(default)]
+    account_data: Vec<AccountData>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AccountData {
+    account: String,
+    native_balance_change: i64,
+    #[serde(default)]
+    token_balance_changes: Vec<TokenBalanceChange>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TokenBalanceChange {
+    mint: String,
+    raw_token_amount: RawTokenAmount,
+    token_account: String,
+    user_account: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawTokenAmount {
+    decimals: u8,
+    token_amount: String,
 }
 
 #[tokio::main]
@@ -78,14 +105,27 @@ async fn auth_middleware(
     }
 }
 
-async fn webhook_handler(
-    Json(transactions): Json<Vec<HeliusTransaction>>
-) -> StatusCode {
+async fn webhook_handler(Json(transactions): Json<Vec<HeliusTransaction>>) -> StatusCode {
     for tx in &transactions {
         println!(
-            "{} | slot {} | {} lamports | type: {}\n  {}",
-            tx.signature, tx.slot, tx.fee, tx.tx_type, tx.description
+            "tx {} | slot {} | fee {} lamports",
+            tx.signature, tx.slot, tx.fee
         );
+
+        for account_data in &tx.account_data {
+            for token_balance_change in &account_data.token_balance_changes {
+                let raw = token_balance_change
+                    .raw_token_amount
+                    .token_amount
+                    .parse::<i64>()
+                    .unwrap_or(0);
+                let decimals = token_balance_change.raw_token_amount.decimals;
+                println!(
+                    "  {} | mint {} | delta {} ({} decimals)",
+                    token_balance_change.user_account, token_balance_change.mint, raw, decimals
+                );
+            }
+        }
     }
     StatusCode::OK
 }
