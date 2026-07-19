@@ -6,11 +6,25 @@ use axum::{
     response::Response,
     routing::{get, post},
 };
-use serde_json::Value;
+use serde::Deserialize;
 
 #[derive(Clone)]
 struct AppState {
     webhook_secret: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HeliusTransaction {
+    signature: String,
+    slot: u64,
+    timestamp: i64,
+    fee: u64,
+    fee_payer: String,
+    source: String,
+    description: String,
+    #[serde(rename = "type")]
+    tx_type: String,
 }
 
 #[tokio::main]
@@ -64,7 +78,14 @@ async fn auth_middleware(
     }
 }
 
-async fn webhook_handler(Json(payload): Json<Value>) -> StatusCode {
-    println!("Transaction received:\n{:#}\n", payload);
+async fn webhook_handler(
+    Json(transactions): Json<Vec<HeliusTransaction>>
+) -> StatusCode {
+    for tx in &transactions {
+        println!(
+            "{} | slot {} | {} lamports | type: {}\n  {}",
+            tx.signature, tx.slot, tx.fee, tx.tx_type, tx.description
+        );
+    }
     StatusCode::OK
 }
