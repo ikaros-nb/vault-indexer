@@ -1,7 +1,7 @@
 # vault-indexer
 
 Axum service that receives [Helius](https://www.helius.dev/) enhanced webhook
-notifications for a custom Solana Vault program, authenticates them, parses the
+notifications for a [custom Solana Vault program](https://github.com/ikaros-nb/solana-token-vault), authenticates them, parses the
 transaction payload, and logs token balance changes. This is the ingestion layer
 of a Solana indexer; Postgres persistence is next.
 
