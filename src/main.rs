@@ -33,7 +33,7 @@ struct HeliusTransaction {
 #[serde(rename_all = "camelCase")]
 struct AccountData {
     account: String,
-    native_balance_change: i64,
+    native_balance_change: i64, // signed: can be negative (e.g. fees)
     #[serde(default)]
     token_balance_changes: Vec<TokenBalanceChange>,
 }
@@ -51,7 +51,7 @@ struct TokenBalanceChange {
 #[serde(rename_all = "camelCase")]
 struct RawTokenAmount {
     decimals: u8,
-    token_amount: String,
+    token_amount: String, // string, and can be signed
 }
 
 #[tokio::main]
@@ -120,9 +120,15 @@ async fn webhook_handler(Json(transactions): Json<Vec<HeliusTransaction>>) -> St
                     .parse::<i64>()
                     .unwrap_or(0);
                 let decimals = token_balance_change.raw_token_amount.decimals;
+                let amount = raw as f64 / 10f64.powi(decimals as i32);
+
                 println!(
-                    "  {} | mint {} | delta {} ({} decimals)",
-                    token_balance_change.user_account, token_balance_change.mint, raw, decimals
+                    "  {} | mint {} | {} ({} raw, {} dec.)",
+                    token_balance_change.user_account,
+                    token_balance_change.mint,
+                    amount,
+                    raw,
+                    decimals
                 );
             }
         }
