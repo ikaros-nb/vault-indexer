@@ -1,5 +1,5 @@
 [package]
-name = "solana_tx_trigger"
+name = "vault_indexer"
 version = "0.1.0"
 edition = "2024"
 
